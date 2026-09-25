@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA FLUX // Premium Unrestricted Image Studio</title>
+    <!-- Modern Typography: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <!-- Background Glow Blobs -->
+    <div class="bg-glow blob-1"></div>
+    <div class="bg-glow blob-2"></div>
+    <div class="bg-glow blob-3"></div>
+
+    <div class="app-container">
+        <!-- Top Header Navigation -->
+        <header class="studio-header">
+            <div class="brand-badge">
+                <div class="brand-icon"><i data-lucide="sparkles"></i></div>
+                <div class="brand-text">
+                    <span class="brand-title">AURA <span class="accent-text">FLUX.1</span></span>
+                    <span class="brand-subtitle">A100 UNRESTRICTED STUDIO</span>
+                </div>
+            </div>
+
+            <div class="system-stats-bar">
+                <div class="stat-item">
+                    <i data-lucide="cpu"></i>
+                    <span id="stat-gpu">Detecting GPU...</span>
+                </div>
+                <div class="stat-item">
+                    <i data-lucide="database"></i>
+                    <span id="stat-vram">VRAM: -- / -- GB</span>
+                </div>
+                <div class="stat-item highlight">
+                    <i data-lucide="zap"></i>
+                    <span id="stat-precision">Precision: BF16</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-refresh-sys">
+                    <i data-lucide="refresh-cw"></i> Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <main class="studio-grid">
+            <!-- Left Panel: Controls & Inputs -->
+            <section class="control-panel glass-card">
+                <div class="panel-header">
+                    <h2><i data-lucide="sliders"></i> Studio Controls</h2>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="t2i" id="mode-t2i"><i data-lucide="type"></i> Text to Image</button>
+                        <button class="mode-btn" data-mode="i2i" id="mode-i2i"><i data-lucide="image"></i> Image to Image</button>
+                    </div>
+                </div>
+
+                <div class="panel-body">
+                    <!-- Model Selector -->
+                    <div class="form-group">
+                        <label><i data-lucide="layers"></i> Foundation Model</label>
+                        <select id="model-select" class="custom-select">
+                            <option value="black-forest-labs/FLUX.1-schnell" data-type="flux" selected>FLUX.1-schnell (Ultra-Fast 4-Step) ⚡</option>
+                            <option value="black-forest-labs/FLUX.1-dev" data-type="flux">FLUX.1-dev (High Detail 20+ Step) 🎨</option>
+                            <option value="Qwen/Qwen-Image-2.1" data-type="qwen">Qwen-Image-2.1 (Next-Gen Unified T2I+Edit) 🆕</option>
+                            <option value="stabilityai/stable-diffusion-xl-base-1.0" data-type="sdxl">SDXL 1.0 (Classic Photorealism + Largest LoRA Ecosystem)</option>
+                            <option value="stabilityai/stable-diffusion-3.5-medium" data-type="sd3">SD 3.5 Medium (Lightweight T4/L4 Friendly) 🪶</option>
+                            <option value="custom" data-type="custom">Custom HuggingFace Model ID...</option>
+                        </select>
+                        <input type="text" id="custom-model-input" class="custom-input hidden mt-2" placeholder="Enter HuggingFace Model ID (e.g., user/model-name)">
+                    </div>
+
+                    <!-- Prompt Input -->
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label><i data-lucide="message-square"></i> Prompt</label>
+                            <button class="text-link-btn" id="btn-enhance-prompt"><i data-lucide="wand-2"></i> Enhance Prompt</button>
+                        </div>
+                        <textarea id="prompt-input" class="custom-textarea" rows="4" placeholder="Enter detailed prompt description... (Unrestricted execution enabled)"></textarea>
+                    </div>
+
+                    <!-- Negative Prompt Input (Collapsible/Conditional) -->
+                    <div class="form-group" id="neg-prompt-group">
+                        <label><i data-lucide="minus-circle"></i> Negative Prompt</label>
+                        <input type="text" id="negative-prompt" class="custom-input" placeholder="deformed, blurry, low resolution, bad hands, artifacts">
+                    </div>
+
+                    <!-- Image to Image Upload Dropzone (Conditional) -->
+                    <div class="form-group hidden" id="i2i-dropzone-group">
+                        <label><i data-lucide="upload-cloud"></i> Source Image</label>
+                        <div class="dropzone" id="dropzone">
+                            <input type="file" id="init-image-input" accept="image/*" hidden>
+                            <div class="dropzone-content" id="dropzone-content">
+                                <i data-lucide="image-plus" class="drop-icon"></i>
+                                <span>Drag & Drop image or <strong>Browse</strong></span>
+                            </div>
+                            <img id="init-image-preview" class="init-preview hidden" alt="Source Image">
+                        </div>
+                        <div class="slider-group mt-2">
+                            <div class="slider-header">
+                                <span>Denoising Strength</span>
+                                <span class="slider-value" id="val-denoising">0.75</span>
+                            </div>
+                            <input type="range" id="denoising-slider" min="0.1" max="1.0" step="0.05" value="0.75" class="custom-slider">
+                        </div>
+                    </div>
+
+                    <!-- Aspect Ratio Presets -->
+                    <div class="form-group">
+                        <label><i data-lucide="crop"></i> Aspect Ratio</label>
+                        <div class="aspect-grid">
+                            <button class="aspect-btn active" data-w="1024" data-h="1024">
+                                <span class="ratio-box r-1-1"></span> 1:1 Square
+                            </button>
+                            <button class="aspect-btn" data-w="1280" data-h="720">
+                                <span class="ratio-box r-16-9"></span> 16:9 Landscape
+                            </button>
+                            <button class="aspect-btn" data-w="720" data-h="1280">
+                                <span class="ratio-box r-9-16"></span> 9:16 Portrait
+                            </button>
+                            <button class="aspect-btn" data-w="1152" data-h="864">
+                                <span class="ratio-box r-4-3"></span> 4:3 Standard
+                            </button>
+                            <button class="aspect-btn" data-w="1344" data-h="576">
+                                <span class="ratio-box r-21-9"></span> 21:9 Ultrawide
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- LoRA Manager Section -->
+                    <div class="form-group accordion-section">
+                        <div class="accordion-header" id="lora-accordion-toggle">
+                            <span><i data-lucide="package-plus"></i> LoRA Models Adapter (<span id="lora-count">0</span> Active)</span>
+                            <i data-lucide="chevron-down" class="acc-icon"></i>
+                        </div>
+                        <div class="accordion-body hidden" id="lora-accordion-body">
+                            <div id="lora-list-container">
+                                <!-- LoRA rows injected dynamically -->
+                            </div>
+                            <button class="btn btn-secondary btn-sm mt-2 w-full" id="btn-add-lora">
+                                <i data-lucide="plus"></i> Add LoRA Model
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Parameters Accordion -->
+                    <div class="form-group accordion-section">
+                        <div class="accordion-header" id="adv-accordion-toggle">
+                            <span><i data-lucide="settings-2"></i> Advanced Sampling Parameters</span>
+                            <i data-lucide="chevron-down" class="acc-icon"></i>
+                        </div>
+                        <div class="accordion-body hidden" id="adv-accordion-body">
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Inference Steps</span>
+                                    <span class="slider-value" id="val-steps">25</span>
+                                </div>
+                                <input type="range" id="steps-slider" min="4" max="80" step="1" value="25" class="custom-slider">
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Guidance Scale (CFG)</span>
+                                    <span class="slider-value" id="val-cfg">4.0</span>
+                                </div>
+                                <input type="range" id="cfg-slider" min="1.0" max="20.0" step="0.5" value="4.0" class="custom-slider">
+                            </div>
+
+                            <div class="form-group mt-2">
+                                <div class="label-row">
+                                    <label>Seed (-1 for Random)</label>
+                                    <button class="text-link-btn" id="btn-random-seed"><i data-lucide="shuffle"></i> Randomize</button>
+                                </div>
+                                <input type="number" id="seed-input" class="custom-input" value="-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button class="btn btn-primary btn-generate" id="btn-generate">
+                        <span class="btn-text"><i data-lucide="sparkles"></i> Generate Masterpiece</span>
+                        <div class="loader-spinner hidden" id="gen-spinner"></div>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Panel: Viewport Canvas & Gallery -->
+            <section class="viewport-panel">
+                <!-- Live Display Card -->
+                <div class="canvas-card glass-card">
+                    <div class="canvas-header">
+                        <span class="canvas-title"><i data-lucide="eye"></i> Output Canvas</span>
+                        <div class="canvas-actions">
+                            <button class="btn btn-secondary btn-icon" id="btn-download" title="Download Image" disabled>
+                                <i data-lucide="download"></i>
+                            </button>
+                            <button class="btn btn-secondary btn-icon" id="btn-fullscreen" title="Fullscreen View" disabled>
+                                <i data-lucide="maximize-2"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="canvas-body" id="canvas-viewport">
+                        <div class="placeholder-state" id="placeholder-state">
+                            <div class="placeholder-glow"></div>
+                            <i data-lucide="image" class="placeholder-icon"></i>
+                            <p class="placeholder-title">Ready for Creation</p>
+                            <p class="placeholder-subtitle">Enter your prompt and click Generate to run inference on Google Colab A100 GPU.</p>
+                        </div>
+
+                        <div class="loading-state hidden" id="loading-state">
+                            <div class="aura-loader">
+                                <div class="aura-ring ring-1"></div>
+                                <div class="aura-ring ring-2"></div>
+                                <div class="aura-ring ring-3"></div>
+                            </div>
+                            <p class="loading-text" id="loading-status-text">Synthesizing Pixels with FLUX.1 Pipeline...</p>
+                            <span class="loading-timer" id="loading-timer">0.0s</span>
+                        </div>
+
+                        <img id="generated-image" class="generated-img hidden" alt="Generated Output">
+                    </div>
+
+                    <!-- Metadata Bar Footer -->
+                    <div class="metadata-bar hidden" id="metadata-bar">
+                        <div class="meta-tag"><i data-lucide="hash"></i> Seed: <span id="meta-seed">--</span></div>
+                        <div class="meta-tag"><i data-lucide="clock"></i> Time: <span id="meta-time">--</span>s</div>
+                        <div class="meta-tag"><i data-lucide="maximize"></i> <span id="meta-res">1024x1024</span></div>
+                        <div class="meta-tag"><i data-lucide="gauge"></i> Steps: <span id="meta-steps">--</span></div>
+                    </div>
+                </div>
+
+                <!-- Session Gallery Bar -->
+                <div class="gallery-card glass-card">
+                    <div class="gallery-header">
+                        <h3><i data-lucide="grid"></i> Session Gallery</h3>
+                        <span class="gallery-count" id="gallery-count">0 items</span>
+                    </div>
+                    <div class="gallery-scroll" id="gallery-container">
+                        <div class="empty-gallery">No images generated in this session yet.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox-modal hidden" id="lightbox">
+        <div class="lightbox-backdrop" id="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightbox-close"><i data-lucide="x"></i></button>
+            <img id="lightbox-img" src="" alt="Fullscreen View">
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

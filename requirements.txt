@@ -1,0 +1,23 @@
+# ============================================================
+# AURA FLUX Studio — Colab-Optimized Requirements
+# ============================================================
+# EXCLUDED (already pre-installed on Google Colab):
+#   torch, torchvision, pillow, jinja2, numpy, protobuf, pydantic
+# ============================================================
+
+# --- Diffusion & ML Pipeline ---
+diffusers>=0.30.0
+transformers>=4.40.0
+accelerate>=0.30.0
+safetensors>=0.4.0
+peft>=0.10.0
+sentencepiece>=0.1.99
+huggingface-hub>=0.23.0
+
+# --- Web Server ---
+fastapi>=0.100.0
+uvicorn>=0.22.0
+python-multipart>=0.0.6
+
+# --- Tunnel for External Access ---
+pyngrok>=7.0.0
