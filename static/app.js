@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.className = 'lora-row';
         row.id = `lora-row-${loraCounter}`;
         row.innerHTML = `
-            <input type="text" class="custom-input lora-input lora-path" list="lora-presets" placeholder="HuggingFace Repo ID or Path (e.g. XLabs-AI/flux-lora-collection)">
+            <input type="text" class="custom-input lora-input lora-path" placeholder="HuggingFace Repo ID or Path (e.g. XLabs-AI/flux-lora-collection)">
             <input type="number" class="custom-input lora-weight-input lora-scale" value="0.8" step="0.1" min="0.0" max="2.0" title="LoRA Scale Weight">
             <button class="btn btn-secondary btn-icon btn-sm remove-lora-btn" onclick="removeLoraRow(${loraCounter})">
                 <i data-lucide="trash-2"></i>
@@ -258,6 +258,23 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLoraCount();
         if (window.lucide) lucide.createIcons();
     });
+
+    const loraPresetSelect = document.getElementById('lora-preset-select');
+    if (loraPresetSelect) {
+        loraPresetSelect.addEventListener('change', (e) => {
+            const selectedPath = e.target.value;
+            if (selectedPath) {
+                // Auto-click the add button
+                btnAddLora.click();
+                // Find the newly added row and set its value
+                const rows = loraListContainer.querySelectorAll('.lora-row');
+                const lastRow = rows[rows.length - 1];
+                lastRow.querySelector('.lora-path').value = selectedPath;
+                // Reset the select dropdown
+                e.target.value = '';
+            }
+        });
+    }
 
     window.removeLoraRow = function(id) {
         const r = document.getElementById(`lora-row-${id}`);
