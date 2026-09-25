@@ -19,6 +19,7 @@ huggingface-hub>=0.23.0
 fastapi>=0.100.0
 uvicorn>=0.22.0
 python-multipart>=0.0.6
+psutil>=5.9.0
 
 # --- Tunnel for External Access ---
 pyngrok>=7.0.0
