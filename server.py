@@ -61,7 +61,12 @@ class GenerationRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_studio(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    try:
+        return templates.TemplateResponse("index.html", {"request": request})
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        return HTMLResponse(content=f"<pre>Root Route Exception:\n{tb}</pre>", status_code=500)
 
 @app.get("/api/system")
 async def get_system_status():
