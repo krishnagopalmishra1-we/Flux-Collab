@@ -78,9 +78,12 @@ def load_model_endpoint(payload: dict):
             engine.load_model(model_id, model_type)
         return {"status": "success", "message": f"Loaded model {model_id}"}
     except Exception as e:
+        tb = traceback.format_exc()
         print("--- LOAD MODEL EXCEPTION ---")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        print(tb)
+        with open("error.log", "w") as f:
+            f.write(tb)
+        raise HTTPException(status_code=500, detail=f"Load Model Error: {str(e)} | Traceback: {tb}")
 
 @app.post("/api/generate")
 def generate_image(req: GenerationRequest):
@@ -136,9 +139,12 @@ def generate_image(req: GenerationRequest):
         }
 
     except Exception as e:
+        tb = traceback.format_exc()
         print("--- GENERATE EXCEPTION ---")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+        print(tb)
+        with open("error.log", "w") as f:
+            f.write(tb)
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)} | Traceback: {tb}")
 
 if __name__ == "__main__":
     import uvicorn
