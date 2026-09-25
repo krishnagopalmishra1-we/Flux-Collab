@@ -45,9 +45,11 @@ class GenerationEngine:
                 torch.cuda.empty_cache()
 
         try:
+            use_dtype = torch.bfloat16 if model_type.lower() == "flux" else self.dtype
             pretrained_kwargs = {
-                "torch_dtype": self.dtype,
+                "torch_dtype": use_dtype,
                 "use_safetensors": True,
+                "low_cpu_mem_usage": True,
             }
             if token:
                 pretrained_kwargs["token"] = token
@@ -86,14 +88,20 @@ class GenerationEngine:
                 self.pipeline.requires_safety_checker = False
 
             if self.device == "cuda":
-                try:
-                    self.pipeline.to("cuda")
-                except Exception as e:
-                    if isinstance(e, torch.cuda.OutOfMemoryError) or "out of memory" in str(e).lower():
-                        logger.warning("OOM when moving to CUDA, falling back to CPU offload")
-                        self.pipeline.enable_model_cpu_offload()
-                    else:
-                        raise e
+                # Check VRAM for FLUX models to prevent OOM
+                vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                if vram_gb < 20 and self.loaded_model_type == "flux":
+                    logger.info(f"VRAM ({vram_gb:.1f}GB) is < 20GB. Using sequential CPU offload for FLUX.")
+                    self.pipeline.enable_sequential_cpu_offload()
+                else:
+                    try:
+                        self.pipeline.to("cuda")
+                    except Exception as e:
+                        if isinstance(e, torch.cuda.OutOfMemoryError) or "out of memory" in str(e).lower():
+                            logger.warning("OOM when moving to CUDA, falling back to CPU offload")
+                            self.pipeline.enable_model_cpu_offload()
+                        else:
+                            raise e
                 # PyTorch 2.0+ SDPA is enabled by default
 
             self.current_model_id = model_id
@@ -198,7 +206,8 @@ class GenerationEngine:
 
         # Model specific parameters
         if self.loaded_model_type == "flux":
-            kwargs["guidance_scale"] = guidance_scale
+            kwargs["guidance_scale"] = 0.0 if "schnell" in self.current_model_id.lower() else guidance_scale
+            kwargs["max_sequence_length"] = 256
         else: # SDXL
             kwargs["guidance_scale"] = guidance_scale
             if negative_prompt:
@@ -206,6 +215,9 @@ class GenerationEngine:
 
         # Image-to-Image setup
         if mode == "i2i" and init_image is not None:
+            # Most Img2Img diffusers pipelines infer resolution from the image and crash if width/height is explicitly passed
+            kwargs.pop("width", None)
+            kwargs.pop("height", None)
             kwargs["image"] = init_image.resize((width, height))
             kwargs["strength"] = denoising_strength
             # Convert to Img2Img pipeline dynamically if SDXL
@@ -214,11 +226,15 @@ class GenerationEngine:
                 i2i_pipe = StableDiffusionXLImg2ImgPipeline.from_pipe(self.pipeline)
                 output = i2i_pipe(**kwargs)
             elif self.loaded_model_type == "flux":
-                from diffusers import FluxImg2ImgPipeline
-                i2i_pipe = FluxImg2ImgPipeline.from_pipe(self.pipeline)
-                output = i2i_pipe(**kwargs)
+                try:
+                    from diffusers import FluxImg2ImgPipeline
+                    i2i_pipe = FluxImg2ImgPipeline.from_pipe(self.pipeline)
+                    output = i2i_pipe(**kwargs)
+                except ImportError:
+                    logger.warning("FluxImg2ImgPipeline not found in this diffusers version. Falling back to standard pipeline.")
+                    output = self.pipeline(**kwargs)
             else:
-                # FLUX supports image in main pipe or via img2img
+                # Fallback for others
                 output = self.pipeline(**kwargs)
         else:
             output = self.pipeline(**kwargs)

@@ -3,6 +3,7 @@ import io
 import json
 import base64
 import threading
+import traceback
 from typing import Optional, List
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -67,7 +68,7 @@ async def get_system_status():
     return engine.get_system_info()
 
 @app.post("/api/load_model")
-async def load_model_endpoint(payload: dict):
+def load_model_endpoint(payload: dict):
     model_id = payload.get("model_id", "black-forest-labs/FLUX.1-schnell")
     model_type = payload.get("model_type", "flux")
     try:
@@ -77,6 +78,8 @@ async def load_model_endpoint(payload: dict):
             engine.load_model(model_id, model_type)
         return {"status": "success", "message": f"Loaded model {model_id}"}
     except Exception as e:
+        print("--- LOAD MODEL EXCEPTION ---")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate")
@@ -133,6 +136,8 @@ def generate_image(req: GenerationRequest):
         }
 
     except Exception as e:
+        print("--- GENERATE EXCEPTION ---")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 if __name__ == "__main__":
