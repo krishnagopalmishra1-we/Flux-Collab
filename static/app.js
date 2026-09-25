@@ -209,13 +209,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ prompt: cur })
             });
             const data = await res.json();
-            if (res.ok) {
+            if (res.ok && data.enhanced_prompt) {
                 promptInput.value = data.enhanced_prompt;
             } else {
-                alert('Enhancement failed: ' + (data.detail || 'Unknown error'));
+                throw new Error(data.detail || 'API returned failure');
             }
         } catch (err) {
-            alert('Enhancement request failed: ' + err.message);
+            console.warn('Enhancement API failed, using local fallback:', err);
+            // Local fallback logic if HF API is overloaded/down
+            const modifiers = [
+                "masterpiece, highly detailed 8k resolution, cinematic lighting, photorealistic, intricate textures, volumetric depth, professional shot",
+                "hyper-realistic studio portrait, award-winning photography, crisp focus, soft rim lighting, subsurface scattering",
+                "epic conceptual art, ultra-detailed, vibrant color grading, dynamic composition, masterpiece"
+            ];
+            const randomMod = modifiers[Math.floor(Math.random() * modifiers.length)];
+            promptInput.value = `${cur}, ${randomMod}`;
         } finally {
             btnEnhancePrompt.innerHTML = originalText;
             btnEnhancePrompt.disabled = false;
@@ -304,6 +312,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Make Style Select instantly update the UI so users know it's working
+    styleSelect.addEventListener('change', (e) => {
+        const selectedStyle = e.target.value;
+        if (STYLE_PRESETS[selectedStyle] && selectedStyle !== 'base') {
+            const curP = promptInput.value.trim();
+            const curN = negativePromptInput.value.trim();
+            
+            // Check if it already has tags to avoid spamming
+            const firstPosTag = STYLE_PRESETS[selectedStyle].pos.split(',')[0];
+            if (!curP.includes(firstPosTag)) {
+                promptInput.value = curP ? `${curP}, ${STYLE_PRESETS[selectedStyle].pos}` : STYLE_PRESETS[selectedStyle].pos;
+            }
+            
+            const firstNegTag = STYLE_PRESETS[selectedStyle].neg.split(',')[0];
+            if (!curN.includes(firstNegTag)) {
+                negativePromptInput.value = curN ? `${curN}, ${STYLE_PRESETS[selectedStyle].neg}` : STYLE_PRESETS[selectedStyle].neg;
+            }
+        }
+    });
+
     // --- Main Generation Handler ---
     btnGenerate.addEventListener('click', async () => {
         const prompt = promptInput.value.trim();
@@ -330,17 +358,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Apply Style Presets
+        // Apply Style Presets (Handled at UI level now, see below, but keep here as fallback)
         const selectedStyle = styleSelect.value;
         let finalPrompt = prompt;
         let finalNegative = negativePromptInput.value.trim();
 
         if (STYLE_PRESETS[selectedStyle] && selectedStyle !== 'base') {
-            finalPrompt = `${prompt}, ${STYLE_PRESETS[selectedStyle].pos}`;
-            if (finalNegative) {
-                finalNegative = `${finalNegative}, ${STYLE_PRESETS[selectedStyle].neg}`;
-            } else {
-                finalNegative = STYLE_PRESETS[selectedStyle].neg;
+            // We only inject if it's not already in the prompt (prevent doubling if UI already added it)
+            if (!finalPrompt.includes(STYLE_PRESETS[selectedStyle].pos.split(',')[0])) {
+                finalPrompt = `${prompt}, ${STYLE_PRESETS[selectedStyle].pos}`;
+            }
+            if (!finalNegative.includes(STYLE_PRESETS[selectedStyle].neg.split(',')[0])) {
+                finalNegative = finalNegative ? `${finalNegative}, ${STYLE_PRESETS[selectedStyle].neg}` : STYLE_PRESETS[selectedStyle].neg;
             }
         }
 
