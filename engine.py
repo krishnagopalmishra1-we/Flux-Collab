@@ -146,10 +146,11 @@ class GenerationEngine:
                 adapter_name = f"lora_{idx}"
                 logger.info(f"Loading LoRA [{adapter_name}]: {path} (scale: {scale})")
 
+                hf_token = os.environ.get("HF_TOKEN", None)
                 if weight_name:
-                    self.pipeline.load_lora_weights(path, weight_name=weight_name, adapter_name=adapter_name)
+                    self.pipeline.load_lora_weights(path, weight_name=weight_name, adapter_name=adapter_name, token=hf_token)
                 else:
-                    self.pipeline.load_lora_weights(path, adapter_name=adapter_name)
+                    self.pipeline.load_lora_weights(path, adapter_name=adapter_name, token=hf_token)
 
                 adapter_names.append(adapter_name)
                 adapter_weights.append(scale)
