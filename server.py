@@ -148,4 +148,20 @@ def generate_image(req: GenerationRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    import time
+    import psutil
+
+    # Aggressively kill any zombie process holding port 7860
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            for conn in proc.connections(kind='inet'):
+                if conn.laddr.port == 7860:
+                    print(f"Killing zombie process {proc.pid} on port 7860...")
+                    proc.kill()
+        except Exception:
+            pass
+    
+    time.sleep(2) # Give the OS time to free the socket
+
     uvicorn.run("server:app", host="0.0.0.0", port=7860, reload=False)
