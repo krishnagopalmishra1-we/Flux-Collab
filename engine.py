@@ -1,4 +1,7 @@
 import os
+# Fix for Windows MAX_PATH limit [Errno 22] when downloading large models
+os.environ["HF_HOME"] = os.path.abspath("./hf_cache")
+
 import io
 import time
 import gc
