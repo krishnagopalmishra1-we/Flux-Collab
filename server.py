@@ -62,7 +62,7 @@ class GenerationRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def serve_studio(request: Request):
     try:
-        return templates.TemplateResponse("index.html", {"request": request})
+        return templates.TemplateResponse(request=request, name="index.html")
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
