@@ -284,31 +284,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Style Presets ---
+    const BASE_NEG = "nsfw, nude, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, mutated hands and fingers, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation";
+    
     const STYLE_PRESETS = {
-        base: { pos: "", neg: "" },
+        base: { pos: "", neg: BASE_NEG },
         photorealistic: {
             pos: "masterpiece, ultra-realistic, 8k resolution, raw photo, highly detailed, sharp focus, professional photography",
-            neg: "illustration, painting, cartoon, 3d, cg, deformed, blurry, ugly, sketch, low quality"
+            neg: "illustration, painting, cartoon, 3d, cg, sketch, low quality, " + BASE_NEG
         },
         cinematic: {
             pos: "cinematic lighting, dramatic depth of field, movie still, epic composition, color graded",
-            neg: "amateur, badly directed, poor lighting, standard, uninspired, flat, dull"
+            neg: "amateur, badly directed, poor lighting, standard, uninspired, flat, dull, " + BASE_NEG
         },
         anime: {
             pos: "anime artwork, studio ghibli style, makoto shinkai, colorful, highly detailed anime, masterpiece",
-            neg: "photo, realism, ugly, 3d render, lowres, bad anatomy, bad hands, text, error"
+            neg: "photo, realism, 3d render, lowres, bad hands, text, error, " + BASE_NEG
         },
         digital_art: {
             pos: "concept art, trending on artstation, digital illustration, highly detailed, vibrant, beautiful",
-            neg: "photograph, realistic, messy, low quality, artifact, jpeg"
+            neg: "photograph, realistic, messy, low quality, artifact, jpeg, " + BASE_NEG
         },
         fantasy: {
             pos: "ethereal fantasy concept art, magical, highly detailed, intricate, dnd art, masterpiece",
-            neg: "sci-fi, modern, ordinary, mundane, poor quality, bad anatomy"
+            neg: "sci-fi, modern, ordinary, mundane, poor quality, " + BASE_NEG
         },
         "3d_render": {
             pos: "octane render, unreal engine 5, ray tracing, incredibly detailed 3d, cinematic 3d",
-            neg: "2d, flat, illustration, painting, photo, unshaded, jagged"
+            neg: "2d, flat, illustration, painting, photo, unshaded, jagged, " + BASE_NEG
         }
     };
 
