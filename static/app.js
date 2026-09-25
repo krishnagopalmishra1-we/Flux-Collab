@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeT2iBtn = document.getElementById('mode-t2i');
     const modeI2iBtn = document.getElementById('mode-i2i');
     const modelSelect = document.getElementById('model-select');
+    const styleSelect = document.getElementById('style-select');
     const promptInput = document.getElementById('prompt-input');
     const negativePromptInput = document.getElementById('negative-prompt');
     const negPromptGroup = document.getElementById('neg-prompt-group');
@@ -113,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     modelSelect.addEventListener('change', (e) => {
         const selectedOption = e.target.options[e.target.selectedIndex];
-        const mType = selectedOption.getAttribute('data-type');
         const isCustom = selectedOption.value === 'custom';
 
         // Show/hide custom model text input
@@ -121,26 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
             customModelInput.classList.toggle('hidden', !isCustom);
         }
 
-        if (mType === 'flux') {
-            cfgSlider.value = 4.0;
-            valCfg.textContent = "4.0";
-            stepsSlider.value = selectedOption.value.includes('schnell') ? 4 : 20;
-            valSteps.textContent = stepsSlider.value;
-        } else if (mType === 'qwen') {
-            cfgSlider.value = 5.0;
-            valCfg.textContent = "5.0";
-            stepsSlider.value = 28;
-            valSteps.textContent = "28";
-        } else if (mType === 'sd3') {
-            cfgSlider.value = 5.0;
-            valCfg.textContent = "5.0";
-            stepsSlider.value = 28;
-            valSteps.textContent = "28";
-        } else {
-            cfgSlider.value = 7.5;
-            valCfg.textContent = "7.5";
-            stepsSlider.value = 30;
-            valSteps.textContent = "30";
+        // Auto-adjust sliders from HTML data attributes
+        const optSteps = selectedOption.getAttribute('data-steps');
+        const optCfg = selectedOption.getAttribute('data-cfg');
+        
+        if (optSteps) {
+            stepsSlider.value = optSteps;
+            valSteps.textContent = optSteps;
+        }
+        if (optCfg) {
+            cfgSlider.value = optCfg;
+            valCfg.textContent = optCfg;
         }
     });
 
@@ -199,16 +190,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Seed Randomizer
     btnRandomSeed.addEventListener('click', () => seedInput.value = -1);
 
-    // Prompt Enhancer Assistant
-    btnEnhancePrompt.addEventListener('click', () => {
+    // Prompt Enhancer Assistant (LLM Powered)
+    btnEnhancePrompt.addEventListener('click', async () => {
         const cur = promptInput.value.trim();
-        const modifiers = [
-            "masterpiece, highly detailed 8k resolution, cinematic lighting, photorealistic, intricate textures, volumetric depth, professional shot",
-            "hyper-realistic studio portrait, award-winning photography, crisp focus, soft rim lighting, subsurface scattering",
-            "epic conceptual art, ultra-detailed, vibrant color grading, dynamic composition, masterpiece"
-        ];
-        const randomMod = modifiers[Math.floor(Math.random() * modifiers.length)];
-        promptInput.value = cur ? `${cur}, ${randomMod}` : randomMod;
+        if (!cur) {
+            alert('Please enter a basic prompt first to enhance it!');
+            return;
+        }
+        
+        const originalText = btnEnhancePrompt.innerHTML;
+        btnEnhancePrompt.innerHTML = '<i class="lucide lucide-loader animate-spin"></i> Enhancing...';
+        btnEnhancePrompt.disabled = true;
+
+        try {
+            const res = await fetch('/api/enhance_prompt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: cur })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                promptInput.value = data.enhanced_prompt;
+            } else {
+                alert('Enhancement failed: ' + (data.detail || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Enhancement request failed: ' + err.message);
+        } finally {
+            btnEnhancePrompt.innerHTML = originalText;
+            btnEnhancePrompt.disabled = false;
+        }
     });
 
     // Accordions
@@ -264,6 +275,35 @@ document.addEventListener('DOMContentLoaded', () => {
         return list;
     }
 
+    // --- Style Presets ---
+    const STYLE_PRESETS = {
+        base: { pos: "", neg: "" },
+        photorealistic: {
+            pos: "masterpiece, ultra-realistic, 8k resolution, raw photo, highly detailed, sharp focus, professional photography",
+            neg: "illustration, painting, cartoon, 3d, cg, deformed, blurry, ugly, sketch, low quality"
+        },
+        cinematic: {
+            pos: "cinematic lighting, dramatic depth of field, movie still, epic composition, color graded",
+            neg: "amateur, badly directed, poor lighting, standard, uninspired, flat, dull"
+        },
+        anime: {
+            pos: "anime artwork, studio ghibli style, makoto shinkai, colorful, highly detailed anime, masterpiece",
+            neg: "photo, realism, ugly, 3d render, lowres, bad anatomy, bad hands, text, error"
+        },
+        digital_art: {
+            pos: "concept art, trending on artstation, digital illustration, highly detailed, vibrant, beautiful",
+            neg: "photograph, realistic, messy, low quality, artifact, jpeg"
+        },
+        fantasy: {
+            pos: "ethereal fantasy concept art, magical, highly detailed, intricate, dnd art, masterpiece",
+            neg: "sci-fi, modern, ordinary, mundane, poor quality, bad anatomy"
+        },
+        "3d_render": {
+            pos: "octane render, unreal engine 5, ray tracing, incredibly detailed 3d, cinematic 3d",
+            neg: "2d, flat, illustration, painting, photo, unshaded, jagged"
+        }
+    };
+
     // --- Main Generation Handler ---
     btnGenerate.addEventListener('click', async () => {
         const prompt = promptInput.value.trim();
@@ -290,9 +330,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Apply Style Presets
+        const selectedStyle = styleSelect.value;
+        let finalPrompt = prompt;
+        let finalNegative = negativePromptInput.value.trim();
+
+        if (STYLE_PRESETS[selectedStyle] && selectedStyle !== 'base') {
+            finalPrompt = `${prompt}, ${STYLE_PRESETS[selectedStyle].pos}`;
+            if (finalNegative) {
+                finalNegative = `${finalNegative}, ${STYLE_PRESETS[selectedStyle].neg}`;
+            } else {
+                finalNegative = STYLE_PRESETS[selectedStyle].neg;
+            }
+        }
+
         const payload = {
-            prompt: prompt,
-            negative_prompt: negativePromptInput.value.trim(),
+            prompt: finalPrompt,
+            negative_prompt: finalNegative,
             mode: currentMode,
             denoising_strength: parseFloat(denoisingSlider.value),
             width: selectedWidth,

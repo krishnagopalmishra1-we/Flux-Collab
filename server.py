@@ -59,6 +59,9 @@ class GenerationRequest(BaseModel):
     loras: Optional[List[LoRAModel]] = []
     init_image_base64: Optional[str] = None
 
+class EnhanceRequest(BaseModel):
+    prompt: str
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_studio(request: Request):
     try:
@@ -150,6 +153,43 @@ def generate_image(req: GenerationRequest):
         with open("error.log", "w") as f:
             f.write(tb)
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)} | Traceback: {tb}")
+
+@app.post("/api/enhance_prompt")
+def enhance_prompt(req: EnhanceRequest):
+    if not HF_TOKEN:
+        raise HTTPException(status_code=400, detail="HF_TOKEN not set. Cannot use LLM enhancer.")
+    
+    url = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    sys_prompt = "You are an expert Stable Diffusion prompt engineer. The user will give you a basic idea. You must output ONLY a comma-separated list of highly descriptive tags, artistic modifiers, lighting, and camera details to make it a masterpiece. Do NOT output any conversational text, just the tags."
+    
+    payload = {
+        "inputs": f"<|system|>\n{sys_prompt}</s>\n<|user|>\n{req.prompt}</s>\n<|assistant|>\n",
+        "parameters": {
+            "max_new_tokens": 150,
+            "temperature": 0.7,
+            "return_full_text": False
+        }
+    }
+    
+    import urllib.request
+    import json
+    
+    req_http = urllib.request.Request(url, headers=headers, data=json.dumps(payload).encode('utf-8'))
+    try:
+        with urllib.request.urlopen(req_http) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            if isinstance(result, list) and len(result) > 0:
+                generated = result[0].get("generated_text", "").strip()
+                generated = generated.replace("\n", ", ").strip('", ')
+                return {"enhanced_prompt": generated}
+            raise HTTPException(status_code=500, detail="Invalid LLM response format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

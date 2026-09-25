@@ -68,13 +68,27 @@
                     <div class="form-group">
                         <label><i data-lucide="layers"></i> Foundation Model</label>
                         <select id="model-select" class="custom-select">
-                            <option value="black-forest-labs/FLUX.1-schnell" data-type="flux" selected>FLUX.1-schnell (Ultra-Fast 4-Step) ⚡</option>
-                            <option value="black-forest-labs/FLUX.1-dev" data-type="flux">FLUX.1-dev (High Detail 20+ Step) 🎨</option>
-                            <option value="stabilityai/stable-diffusion-xl-base-1.0" data-type="sdxl">SDXL 1.0 (Classic Photorealism + Largest LoRA Ecosystem)</option>
-                            <option value="stabilityai/stable-diffusion-3.5-medium" data-type="sd3">SD 3.5 Medium (Lightweight T4/L4 Friendly) 🪶</option>
-                            <option value="custom" data-type="custom">Custom HuggingFace Model ID...</option>
+                            <option value="black-forest-labs/FLUX.1-schnell" data-type="flux" data-steps="4" data-cfg="1.0" selected>FLUX.1-schnell (Ultra-Fast 4-Step) ⚡</option>
+                            <option value="black-forest-labs/FLUX.1-dev" data-type="flux" data-steps="25" data-cfg="3.5">FLUX.1-dev (High Detail 20+ Step) 🎨</option>
+                            <option value="stabilityai/stable-diffusion-xl-base-1.0" data-type="sdxl" data-steps="30" data-cfg="7.0">SDXL 1.0 (Classic Photorealism + Largest LoRA Ecosystem)</option>
+                            <option value="stabilityai/stable-diffusion-3.5-medium" data-type="sd3" data-steps="30" data-cfg="4.5">SD 3.5 Medium (Lightweight T4/L4 Friendly) 🪶</option>
+                            <option value="custom" data-type="custom" data-steps="25" data-cfg="5.0">Custom HuggingFace Model ID...</option>
                         </select>
                         <input type="text" id="custom-model-input" class="custom-input hidden mt-2" placeholder="Enter HuggingFace Model ID (e.g., user/model-name)">
+                    </div>
+
+                    <!-- Style Preset Selector -->
+                    <div class="form-group">
+                        <label><i data-lucide="palette"></i> Artistic Style</label>
+                        <select id="style-select" class="custom-select">
+                            <option value="base" selected>Base (No Style Overlay)</option>
+                            <option value="photorealistic">Photorealistic (8k, Raw Photo)</option>
+                            <option value="cinematic">Cinematic (Dramatic Lighting, Epic)</option>
+                            <option value="anime">Anime (Studio Ghibli, 2D Art)</option>
+                            <option value="digital_art">Digital Art (Concept Art, Trending)</option>
+                            <option value="fantasy">Fantasy (Magic, Ethereal, D&D)</option>
+                            <option value="3d_render">3D Render (Octane, Unreal Engine 5)</option>
+                        </select>
                     </div>
 
                     <!-- Prompt Input -->
