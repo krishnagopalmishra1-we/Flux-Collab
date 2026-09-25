@@ -255,8 +255,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    overflow-y: auto;
-    max-height: calc(100vh - 160px);
 }
 
 /* Form Controls */
