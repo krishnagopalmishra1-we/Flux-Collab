@@ -90,7 +90,7 @@ class GenerationEngine:
             if self.device == "cuda":
                 # Check VRAM for FLUX models to prevent OOM
                 vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-                if vram_gb < 20 and self.loaded_model_type == "flux":
+                if vram_gb < 20 and model_type.lower() == "flux":
                     logger.info(f"VRAM ({vram_gb:.1f}GB) is < 20GB. Using sequential CPU offload for FLUX.")
                     self.pipeline.enable_sequential_cpu_offload()
                 else:
