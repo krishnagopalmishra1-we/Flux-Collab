@@ -34,3 +34,6 @@ outputs/
 
 # MacOS
 .DS_Store
+
+# HuggingFace model cache
+hf_cache/

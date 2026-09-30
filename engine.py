@@ -1,6 +1,10 @@
 import os
-# Fix for Windows MAX_PATH limit [Errno 22] when downloading large models
-os.environ["HF_HOME"] = os.path.abspath("./hf_cache")
+# Use a deterministic cache path. On Colab, /content is always available.
+# Fallback to relative path for local development.
+if os.path.isdir("/content"):
+    os.environ.setdefault("HF_HOME", "/content/hf_cache")
+else:
+    os.environ.setdefault("HF_HOME", os.path.abspath("./hf_cache"))
 
 import io
 import time
@@ -26,7 +30,8 @@ class GenerationEngine:
         self.current_model_id = None
         self.pipeline = None
         self.active_loras = []
-        self.loaded_model_type = None  # 'flux' or 'sdxl'
+        self.loaded_model_type = None  # 'flux', 'sdxl', 'sd3', 'qwen'
+        self._cpu_offload_active = False
 
         logger.info(f"Initialized Generation Engine on device: {self.device} ({self.precision_str})")
 
@@ -96,13 +101,16 @@ class GenerationEngine:
                 if vram_gb < 20 and model_type.lower() == "flux":
                     logger.info(f"VRAM ({vram_gb:.1f}GB) is < 20GB. Using sequential CPU offload for FLUX.")
                     self.pipeline.enable_sequential_cpu_offload()
+                    self._cpu_offload_active = True
                 else:
                     try:
                         self.pipeline.to("cuda")
+                        self._cpu_offload_active = False
                     except Exception as e:
                         if isinstance(e, torch.cuda.OutOfMemoryError) or "out of memory" in str(e).lower():
                             logger.warning("OOM when moving to CUDA, falling back to CPU offload")
                             self.pipeline.enable_model_cpu_offload()
+                            self._cpu_offload_active = True
                         else:
                             raise e
                 # PyTorch 2.0+ SDPA is enabled by default
@@ -183,14 +191,27 @@ class GenerationEngine:
             # Auto fallback load black-forest-labs/FLUX.1-schnell if not loaded
             self.load_model("black-forest-labs/FLUX.1-schnell", "flux")
 
-        if loras:
-            self.apply_loras(loras)
+        # LoRA management: only re-apply if the configuration actually changed
+        requested_loras = loras if loras else []
+        if requested_loras != self.active_loras:
+            if requested_loras:
+                self.apply_loras(requested_loras)
+            elif self.active_loras:
+                # User removed all LoRAs — unload them
+                if hasattr(self.pipeline, "unload_lora_weights"):
+                    try:
+                        self.pipeline.unload_lora_weights()
+                    except Exception:
+                        pass
+                self.active_loras = []
 
         # Handle Random / Locked Seed
         if seed is None or seed < 0:
             seed = torch.randint(0, 2**32 - 1, (1,)).item()
 
-        generator = torch.Generator(device=self.device).manual_seed(seed)
+        # Use CPU generator when CPU offload is active to prevent device mismatch
+        gen_device = "cpu" if self._cpu_offload_active else self.device
+        generator = torch.Generator(device=gen_device).manual_seed(seed)
 
         start_time = time.time()
         logger.info(f"Starting generation | Seed: {seed} | Resolution: {width}x{height} | Steps: {num_inference_steps}")
@@ -212,10 +233,17 @@ class GenerationEngine:
         if self.loaded_model_type == "flux":
             kwargs["guidance_scale"] = 0.0 if "schnell" in self.current_model_id.lower() else guidance_scale
             kwargs["max_sequence_length"] = 256
-        else: # SDXL
+        elif self.loaded_model_type == "sdxl":
             kwargs["guidance_scale"] = guidance_scale
             if negative_prompt:
                 kwargs["negative_prompt"] = negative_prompt
+        elif self.loaded_model_type == "sd3":
+            kwargs["guidance_scale"] = guidance_scale
+            if negative_prompt:
+                kwargs["negative_prompt"] = negative_prompt
+        else:
+            # qwen and other custom models
+            kwargs["guidance_scale"] = guidance_scale
 
         # Image-to-Image setup
         if mode == "i2i" and init_image is not None:

@@ -249,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.id = `lora-row-${loraCounter}`;
         row.innerHTML = `
             <input type="text" class="custom-input lora-input lora-path" placeholder="HuggingFace Repo ID or Path (e.g. XLabs-AI/flux-lora-collection)">
+            <input type="text" class="custom-input lora-input lora-weight-name" placeholder="Weight file (optional, e.g. lora.safetensors)" style="font-size:0.8em; opacity:0.8;">
             <input type="number" class="custom-input lora-weight-input lora-scale" value="0.8" step="0.1" min="0.0" max="2.0" title="LoRA Scale Weight">
             <button class="btn btn-secondary btn-icon btn-sm remove-lora-btn" onclick="removeLoraRow(${loraCounter})">
                 <i data-lucide="trash-2"></i>
@@ -293,8 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
         rows.forEach(r => {
             const path = r.querySelector('.lora-path').value.trim();
             const scale = parseFloat(r.querySelector('.lora-scale').value) || 1.0;
+            const weightNameEl = r.querySelector('.lora-weight-name');
+            const weightName = weightNameEl ? weightNameEl.value.trim() : '';
             if (path) {
-                list.push({ repo_or_path: path, scale: scale });
+                const entry = { repo_or_path: path, scale: scale };
+                if (weightName) entry.weight_name = weightName;
+                list.push(entry);
             }
         });
         return list;
