@@ -175,6 +175,14 @@ class GenerationEngine:
             return True
         except Exception as e:
             logger.error(f"Error applying LoRAs: {str(e)}")
+            # FATAL: If LoRA loading crashed, the pipeline's memory may be corrupted. 
+            # Revert it immediately so the user can remove the broken LoRA and try again.
+            if hasattr(self.pipeline, "unload_lora_weights"):
+                try:
+                    self.pipeline.unload_lora_weights()
+                except Exception:
+                    pass
+            self.active_loras = [] # Reset state
             raise e
 
     def generate(
