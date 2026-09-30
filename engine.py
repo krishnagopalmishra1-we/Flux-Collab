@@ -10,18 +10,24 @@ import io
 import time
 import gc
 import torch
+import sys
+import importlib.util
 
-# === CRITICAL FIX: Bypass diffusers torchao version check ===
-# Spoofing the version caused a meta tensor crash because diffusers tried to use missing torchao features.
-# Instead, we just forcefully tell diffusers that torchao is not available.
-import diffusers.utils
-import diffusers.utils.import_utils
-if hasattr(diffusers.utils, "is_torchao_available"):
-    diffusers.utils.is_torchao_available = lambda *args, **kwargs: False
-if hasattr(diffusers.utils.import_utils, "is_torchao_available"):
-    diffusers.utils.import_utils.is_torchao_available = lambda *args, **kwargs: False
-    diffusers.utils.import_utils.is_torchao_available = lambda *args, **kwargs: False
-# ============================================================
+# === CRITICAL FIX: The ultimate import-level bypass for torchao ===
+# Colab stubbornly protects torchao 0.10.0 from pip uninstall.
+# Diffusers internally uses importlib.util.find_spec("torchao") to check for it.
+# By mocking find_spec *before* diffusers is imported, we organically trick diffusers
+# into thinking torchao is completely absent, ensuring it uses standard PEFT loading.
+if "torchao" in sys.modules:
+    del sys.modules["torchao"]
+
+_orig_find_spec = importlib.util.find_spec
+def _mock_find_spec(name, package=None):
+    if name == "torchao":
+        return None
+    return _orig_find_spec(name, package)
+importlib.util.find_spec = _mock_find_spec
+# ==================================================================
 
 from PIL import Image
 import logging
