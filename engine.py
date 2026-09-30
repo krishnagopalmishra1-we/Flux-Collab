@@ -89,11 +89,15 @@ class GenerationEngine:
                     model_id, **pretrained_kwargs
                 )
 
-            # Ensure pipeline is transferred to GPU and disable safety checkers if present
+            # === UNRESTRICTED MODE: Disable ALL safety/censorship components ===
             if hasattr(self.pipeline, "safety_checker"):
                 self.pipeline.safety_checker = None
             if hasattr(self.pipeline, "requires_safety_checker"):
                 self.pipeline.requires_safety_checker = False
+            if hasattr(self.pipeline, "feature_extractor"):
+                self.pipeline.feature_extractor = None
+            if hasattr(self.pipeline, "watermarker"):
+                self.pipeline.watermarker = None
 
             if self.device == "cuda":
                 # Check VRAM for FLUX models to prevent OOM
