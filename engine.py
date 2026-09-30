@@ -10,6 +10,17 @@ import io
 import time
 import gc
 import torch
+
+# === CRITICAL FIX: Bypass diffusers torchao version check ===
+# Colab pre-installs torchao 0.10.0 which crashes diffusers during LoRA loading.
+# By spoofing the version here, diffusers will bypass the crash. We don't use torchao features anyway.
+try:
+    import torchao
+    torchao.__version__ = "0.16.0"
+except Exception:
+    pass
+# ============================================================
+
 from PIL import Image
 import logging
 
