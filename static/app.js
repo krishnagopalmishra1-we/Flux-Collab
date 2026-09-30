@@ -264,6 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loraPresetSelect) {
         loraPresetSelect.addEventListener('change', (e) => {
             const selectedPath = e.target.value;
+            
+            if (selectedPath === "CLEAR_ALL") {
+                loraListContainer.innerHTML = '';
+                updateLoraCount();
+                e.target.value = '';
+                return;
+            }
+            
             if (selectedPath) {
                 // Auto-click the add button
                 btnAddLora.click();
