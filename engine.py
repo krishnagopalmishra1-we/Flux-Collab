@@ -20,7 +20,19 @@ if hasattr(diffusers.utils, "is_torchao_available"):
     diffusers.utils.is_torchao_available = lambda *args, **kwargs: False
 if hasattr(diffusers.utils.import_utils, "is_torchao_available"):
     diffusers.utils.import_utils.is_torchao_available = lambda *args, **kwargs: False
-    diffusers.utils.import_utils.is_torchao_available = lambda *args, **kwargs: False
+
+# peft (used by every load_lora_weights call) has its own is_torchao_available() that RAISES
+# ImportError when Colab's preinstalled torchao is < 0.16. That is the "torchao alarm" that
+# crashes LoRA selection. Patch it everywhere it was imported by name.
+import sys
+try:
+    import peft.import_utils
+    peft.import_utils.is_torchao_available = lambda *args, **kwargs: False
+    for _name, _mod in list(sys.modules.items()):
+        if _name.startswith("peft") and getattr(_mod, "is_torchao_available", None) is not None:
+            _mod.is_torchao_available = lambda *args, **kwargs: False
+except ImportError:
+    pass
 # ============================================================
 
 from PIL import Image
